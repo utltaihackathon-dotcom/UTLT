@@ -57,3 +57,31 @@ This feature uses Firestore reads/writes and client-side transactions only; it d
 ## Indian language support
 
 The app includes a language selector for English and all 22 languages listed in the Eighth Schedule of the Constitution of India. The selector translates visible interface text using Google's public web translation endpoint; an internet connection is required. Translation availability and quality depend on the provider's language coverage, and the app remains usable in English if a translation cannot be returned. User-entered names, profile details, family member names, and other account-specific text are excluded from translation requests. For a production release, replace the public web endpoint with an authenticated translation service such as a properly configured Bhashini or Google Cloud Translation integration, and review its privacy terms and rate limits.
+
+
+## UTLT AI API + watchdog (Render)
+
+The chatbot now uses the UTLT-owned OpenAI-compatible Supabase Edge Function. The existing
+`backend/utlt_brain.py` water-analysis engine is retained and its computed insights are
+provided to the conversational API as context.
+
+Set these environment variables on the Render backend service (never put the key in browser JS
+or commit it to GitHub):
+
+- `UTLT_AI_API_URL` = `https://raujzsawwpmixwlcgcgs.supabase.co/functions/v1/public-ai-api`
+- `UTLT_AI_API_KEY` = your private key for the Supabase AI endpoint (the value beginning with `mle_`)
+- `FRONTEND_ORIGINS` = the exact GitHub Pages origin for this site, or `*` while testing only.
+
+Set the Render service root directory to `backend`, build command to
+`pip install -r requirements.txt`, and start command to
+`uvicorn api:app --host 0.0.0.0 --port $PORT`.
+
+The API starts a watchdog thread that tests the upstream AI endpoint immediately and every
+5 minutes while the Render process is running. `/health` is suitable for an external uptime
+monitor; `/diagnostics` provides safe status details for `problem.html`. A background thread
+cannot wake a fully sleeping Render instance. If the selected Render plan sleeps, configure an
+external monitor (for example, UptimeRobot or cron-job.org) to request the backend `/health`
+URL every 5 minutes, or use an always-on Render instance.
+
+Open `problem.html` on the deployed site to see backend, API-key-configuration, watchdog and
+last-test status. It intentionally never displays the secret key.
