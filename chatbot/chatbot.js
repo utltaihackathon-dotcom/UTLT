@@ -1,7 +1,7 @@
 (() => {
   "use strict";
   // Keep this pointed at the Render URL that hosts backend/api.py.
-  const API_URL = "https://six-7-75yl.onrender.com";
+  const API_URL = "https://utlt.onrender.com";
   const panel = document.getElementById("utlt-ai-panel");
   const launcher = document.getElementById("utlt-ai-launcher");
   const closeButton = document.getElementById("utlt-ai-close");
