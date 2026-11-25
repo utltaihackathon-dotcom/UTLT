@@ -1,5 +1,6 @@
 (() => {
   "use strict";
+  // Keep this pointed at the Render URL that hosts backend/api.py.
   const API_URL = "https://six-7-75yl.onrender.com";
   const panel = document.getElementById("utlt-ai-panel");
   const launcher = document.getElementById("utlt-ai-launcher");
@@ -9,7 +10,7 @@
   const sendButton = document.getElementById("utlt-ai-send");
   const messages = document.getElementById("utlt-ai-messages");
   const status = document.getElementById("utlt-ai-status");
-  if (![panel, launcher, closeButton, form, input, sendButton, messages].every(Boolean)) {
+  if (![panel, launcher, closeButton, form, input, sendButton, messages, status].every(Boolean)) {
     console.error("UTLT.ai assistant: required HTML elements are missing.");
     return;
   }
@@ -91,10 +92,9 @@
     addMessage(text, "user");
     input.value = "";
     sendButton.disabled = true;
-    status.textContent = "Connecting to UTLT.ai…";
+    status.textContent = "Connecting to your UTLT AI…";
     const pending = addMessage("Thinking…", "bot");
     try {
-      if (API_URL.includes("YOUR-BACKEND-URL")) throw new Error("We are sorry for any delays as the server's API keys have been disqualified.");
       const snapshot = getAppSnapshot();
       const response = await fetch(API_URL + "/chat", {
         method: "POST",
@@ -107,13 +107,19 @@
       renderBotText(pending, payload.reply || "I couldn't create a response.");
       status.textContent = payload.source === "demo" ?
         "Using demo readings — connect your meter for live analysis." :
-        "Analysing readings from your UTLT.ai app.";
+        "Connected to your UTLT AI API · analysing your readings.";
     } catch (error) {
       console.error("UTLT.ai assistant request failed:", error);
       pending.textContent = error.message === "Failed to fetch" ?
-        "I can't reach the AI server. Check that the backend is deployed and its CORS origin includes this website." :
+        "I can't reach the AI server. Check Render and CORS settings." :
         "Assistant unavailable: " + error.message;
-      status.textContent = "Connection issue";
+      status.textContent = "Connection issue · ";
+      const link = document.createElement("a");
+      link.href = "./problem.html";
+      link.textContent = "Open problem diagnostics";
+      link.style.color = "#93c5fd";
+      link.style.textDecoration = "underline";
+      status.appendChild(link);
     } finally {
       sendButton.disabled = false;
       messages.scrollTop = messages.scrollHeight;
@@ -123,6 +129,6 @@
   form.addEventListener("submit", e => { e.preventDefault(); ask(input.value); });
   document.querySelectorAll("[data-utlt-question]").forEach(button =>
     button.addEventListener("click", () => ask(button.dataset.utltQuestion)));
-  addMessage("Hi! I'm your **UTLT.ai** assistant. I can analyse your water usage, daily goal, forecasts, patterns and possible leaks.", "bot");
+  addMessage("Hi! I'm your **UTLT.ai** assistant. Ask me anything, or ask about your water usage, goals, forecasts and possible leaks.", "bot");
   status.textContent = "Ready";
 })();
