@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const API_URL = "https://YOUR-BACKEND-URL.onrender.com";
+  const API_URL = "https://six-7-75yl.onrender.com";
   const panel = document.getElementById("utlt-ai-panel");
   const launcher = document.getElementById("utlt-ai-launcher");
   const closeButton = document.getElementById("utlt-ai-close");
