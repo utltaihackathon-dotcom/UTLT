@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <title>UTLT.ai · Problem diagnostics</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, system-ui, Segoe UI, sans-serif; background:#0b1220; color:#e5edf8; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; padding:32px 18px; }
+    main { width:min(760px,100%); margin:0 auto; }
+    a { color:#7dd3fc; }
+    header { margin-bottom:24px; }
+    h1 { margin:0 0 8px; font-size:clamp(26px,5vw,38px); }
+    p { color:#aab8cb; line-height:1.6; }
+    .card { background:#131f32; border:1px solid #263851; border-radius:16px; padding:18px; margin:14px 0; }
+    .line { display:flex; justify-content:space-between; gap:16px; align-items:center; padding:10px 0; border-bottom:1px solid #263851; }
+    .line:last-child { border:0; }
+    .value { color:#cbd5e1; text-align:right; overflow-wrap:anywhere; }
+    .good { color:#86efac; } .bad { color:#fca5a5; } .warn { color:#fcd34d; }
+    button { border:0; border-radius:10px; background:#1688f8; color:white; padding:11px 16px; font-weight:700; cursor:pointer; }
+    pre { white-space:pre-wrap; overflow-wrap:anywhere; color:#fca5a5; font:13px/1.5 ui-monospace,monospace; }
+    small { color:#8293aa; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <p><a href="./index.html">← Back to UTLT.ai</a></p>
+    <h1>UTLT.ai problem diagnostics</h1>
+    <p>This page checks the Render backend and your UTLT AI API connection. It never displays your API key.</p>
+    <button id="refresh" type="button">Run checks again</button>
+    <small id="updated" style="margin-left:12px">Not checked yet</small>
+  </header>
+  <section class="card" aria-live="polite">
+    <div class="line"><strong>Render backend</strong><span id="backend" class="value">Checking…</span></div>
+    <div class="line"><strong>AI API key configured</strong><span id="configured" class="value">Checking…</span></div>
+    <div class="line"><strong>AI API watchdog</strong><span id="watchdog" class="value">Checking…</span></div>
+    <div class="line"><strong>Last AI API test</strong><span id="last" class="value">Checking…</span></div>
+    <div class="line"><strong>Last response time</strong><span id="latency" class="value">—</span></div>
+    <div class="line"><strong>Watchdog checks completed</strong><span id="checks" class="value">—</span></div>
+  </section>
+  <section class="card">
+    <strong>Problem details</strong>
+    <pre id="error">No diagnostic information yet.</pre>
+  </section>
+  <section class="card">
+    <strong>Common fixes</strong>
+    <p>1. In Render → your backend service → Environment, set <code>UTLT_AI_API_KEY</code> to your Supabase AI API key (the value beginning with <code>mle_</code>).</p>
+    <p>2. Keep <code>UTLT_AI_API_URL</code> set to <code>https://raujzsawwpmixwlcgcgs.supabase.co/functions/v1/public-ai-api</code>.</p>
+    <p>3. Confirm the Render start command is <code>uvicorn api:app --host 0.0.0.0 --port $PORT</code> with the service root directory set to <code>backend</code>.</p>
+    <p>4. If the backend is sleeping, configure an external uptime monitor to request <code>/health</code> every 5 minutes. A watchdog thread cannot wake a completely sleeping Render service by itself.</p>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const API = "https://six-7-75yl.onrender.com";
+  const byId = id => document.getElementById(id);
+  function set(id, value, state) {
+    const el = byId(id); el.textContent = value; el.className = "value " + (state || "");
+  }
+  async function check() {
+    byId("refresh").disabled = true;
+    set("backend", "Checking…");
+    set("configured", "Checking…");
+    set("watchdog", "Checking…");
+    set("last", "Checking…");
+    set("error", "No errors reported.");
+    try {
+      const response = await fetch(API + "/diagnostics", { cache:"no-store" });
+      if (!response.ok) throw new Error("Diagnostics endpoint returned HTTP " + response.status);
+      const d = await response.json();
+      set("backend", d.backend === "online" ? "Online" : "Unavailable", d.backend === "online" ? "good" : "bad");
+      set("configured", d.ai_api.configured ? "Configured" : "Missing UTLT_AI_API_KEY", d.ai_api.configured ? "good" : "bad");
+      set("watchdog", d.watchdog.enabled ? "Running · every " + d.watchdog.interval_seconds + " seconds" : "Disabled", d.watchdog.enabled ? "good" : "warn");
+      set("last", d.ai_api.last_checked ? (d.ai_api.last_ok ? "Passed" : "Failed") + " · " + d.ai_api.last_checked : "Waiting for first test", d.ai_api.last_ok === true ? "good" : d.ai_api.last_ok === false ? "bad" : "warn");
+      set("latency", d.ai_api.last_latency_ms == null ? "—" : d.ai_api.last_latency_ms + " ms");
+      set("checks", d.watchdog.checks_completed);
+      byId("error").textContent = d.ai_api.last_error || "No current AI API error reported.";
+      byId("updated").textContent = "Updated " + new Date(d.checked_at).toLocaleString();
+    } catch (error) {
+      set("backend", "Not reachable", "bad");
+      set("configured", "Unknown");
+      set("watchdog", "Unknown");
+      set("last", "Unknown");
+      byId("error").textContent = error.message + "\n\nCheck that the Render service is deployed and that its URL is correct in problem.html.";
+      byId("updated").textContent = "Check failed";
+    } finally {
+      byId("refresh").disabled = false;
+    }
+  }
+  byId("refresh").addEventListener("click", check);
+  check();
+  setInterval(check, 60000);
+})();
+</script>
+</body>
+</html>
