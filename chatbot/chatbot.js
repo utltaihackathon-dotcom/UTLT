@@ -94,7 +94,7 @@
     status.textContent = "Connecting to UTLT.ai…";
     const pending = addMessage("Thinking…", "bot");
     try {
-      if (API_URL.includes("YOUR-BACKEND-URL")) throw new Error("The backend URL has not been configured yet.");
+      if (API_URL.includes("YOUR-BACKEND-URL")) throw new Error("We are sorry for any delays as the server's API keys have been disqualified.");
       const snapshot = getAppSnapshot();
       const response = await fetch(API_URL + "/chat", {
         method: "POST",
